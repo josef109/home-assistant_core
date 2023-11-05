@@ -3,7 +3,7 @@ from datetime import timedelta
 import time
 from unittest.mock import AsyncMock, patch
 
-from aiowithings import Device, SleepSummary, WithingsClient
+from aiowithings import Device, WithingsClient
 from aiowithings.models import NotificationConfiguration
 import pytest
 
@@ -16,7 +16,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 
 from tests.common import MockConfigEntry, load_json_array_fixture
-from tests.components.withings import load_goals_fixture, load_measurements_fixture
+from tests.components.withings import (
+    load_activity_fixture,
+    load_goals_fixture,
+    load_measurements_fixture,
+    load_sleep_fixture,
+    load_workout_fixture,
+)
 
 CLIENT_ID = "1234"
 CLIENT_SECRET = "5678"
@@ -132,25 +138,28 @@ def mock_withings():
     devices_json = load_json_array_fixture("withings/devices.json")
     devices = [Device.from_api(device) for device in devices_json]
 
-    measurement_groups = load_measurements_fixture("withings/measurements.json")
-
-    sleep_json = load_json_array_fixture("withings/sleep_summaries.json")
-    sleep_summaries = [
-        SleepSummary.from_api(sleep_summary) for sleep_summary in sleep_json
-    ]
+    measurement_groups = load_measurements_fixture()
 
     notification_json = load_json_array_fixture("withings/notifications.json")
     notifications = [
         NotificationConfiguration.from_api(not_conf) for not_conf in notification_json
     ]
 
+    workouts = load_workout_fixture()
+
+    activities = load_activity_fixture()
+
     mock = AsyncMock(spec=WithingsClient)
     mock.get_devices.return_value = devices
-    mock.get_goals.return_value = load_goals_fixture("withings/goals.json")
+    mock.get_goals.return_value = load_goals_fixture()
     mock.get_measurement_in_period.return_value = measurement_groups
     mock.get_measurement_since.return_value = measurement_groups
-    mock.get_sleep_summary_since.return_value = sleep_summaries
+    mock.get_sleep_summary_since.return_value = load_sleep_fixture()
+    mock.get_activities_since.return_value = activities
+    mock.get_activities_in_period.return_value = activities
     mock.list_notification_configurations.return_value = notifications
+    mock.get_workouts_since.return_value = workouts
+    mock.get_workouts_in_period.return_value = workouts
 
     with patch(
         "homeassistant.components.withings.WithingsClient",

@@ -53,14 +53,16 @@ from homeassistant.helpers.typing import ConfigType
 
 from .const import CONF_PROFILES, CONF_USE_WEBHOOK, DEFAULT_TITLE, DOMAIN, LOGGER
 from .coordinator import (
+    WithingsActivityDataUpdateCoordinator,
     WithingsBedPresenceDataUpdateCoordinator,
     WithingsDataUpdateCoordinator,
     WithingsGoalsDataUpdateCoordinator,
     WithingsMeasurementDataUpdateCoordinator,
     WithingsSleepDataUpdateCoordinator,
+    WithingsWorkoutDataUpdateCoordinator,
 )
 
-PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.CALENDAR, Platform.SENSOR]
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -127,10 +129,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 class WithingsData:
     """Dataclass to hold withings domain data."""
 
+    client: WithingsClient
     measurement_coordinator: WithingsMeasurementDataUpdateCoordinator
     sleep_coordinator: WithingsSleepDataUpdateCoordinator
     bed_presence_coordinator: WithingsBedPresenceDataUpdateCoordinator
     goals_coordinator: WithingsGoalsDataUpdateCoordinator
+    activity_coordinator: WithingsActivityDataUpdateCoordinator
+    workout_coordinator: WithingsWorkoutDataUpdateCoordinator
     coordinators: set[WithingsDataUpdateCoordinator] = field(default_factory=set)
 
     def __post_init__(self) -> None:
@@ -140,6 +145,8 @@ class WithingsData:
             self.sleep_coordinator,
             self.bed_presence_coordinator,
             self.goals_coordinator,
+            self.activity_coordinator,
+            self.workout_coordinator,
         }
 
 
@@ -168,10 +175,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     client.refresh_token_function = _refresh_token
     withings_data = WithingsData(
+        client=client,
         measurement_coordinator=WithingsMeasurementDataUpdateCoordinator(hass, client),
         sleep_coordinator=WithingsSleepDataUpdateCoordinator(hass, client),
         bed_presence_coordinator=WithingsBedPresenceDataUpdateCoordinator(hass, client),
         goals_coordinator=WithingsGoalsDataUpdateCoordinator(hass, client),
+        activity_coordinator=WithingsActivityDataUpdateCoordinator(hass, client),
+        workout_coordinator=WithingsWorkoutDataUpdateCoordinator(hass, client),
     )
 
     for coordinator in withings_data.coordinators:
